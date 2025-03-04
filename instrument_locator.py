@@ -64,6 +64,7 @@ if selected_instrument:
     st.write(f"**Shelf Number:** {instrument_data['Shelf Number']}")
     st.write(f"**Quantity Available:** {instrument_data['Quantity Available']}")
     st.write(f"**Also found in trays:** {instrument_data['Trays']}")
+    st.write(st.session_state.df)
     
     # Fetch image if none exists
     if not instrument_data["Image"]:
