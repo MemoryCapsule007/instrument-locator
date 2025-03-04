@@ -2,27 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 
-# Authentication
-USERNAME = "MemoryCapsule"
-PASSWORD = "WFSC"
-
-def authenticate():
-    if "authenticated" not in st.session_state:
-        st.session_state["authenticated"] = False
-    
-    with st.sidebar:
-        st.subheader("🔑 Admin Login")
-        entered_username = st.text_input("Username")
-        entered_password = st.text_input("Password", type="password")
-        login_button = st.button("Login")
-        
-        if login_button:
-            if entered_username == USERNAME and entered_password == PASSWORD:
-                st.session_state["authenticated"] = True
-                st.success("✅ Authentication successful!")
-            else:
-                st.error("❌ Incorrect credentials!")
-
 # Initialize the dataset
 if "df" not in st.session_state:
     st.session_state.df = pd.DataFrame({
@@ -95,46 +74,43 @@ if selected_instrument:
     if instrument_data["Image"]:
         st.image(instrument_data["Image"], use_column_width=True)
 
-# Authentication only needed for editing
-authenticate()
-if st.session_state["authenticated"]:
-    # Add Instrument
-    st.subheader("➕ Add Instrument")
-    with st.form("Add Instrument"):
-        name = st.text_input("Instrument Name")
-        category = st.text_input("Category")
-        cabinet = st.text_input("Cabinet Location")
-        shelf = st.text_input("Shelf Number")
-        quantity = st.number_input("Quantity Available", min_value=0, step=1)
-        trays = st.text_input("Trays where this instrument can be found")
-        image = st.file_uploader("Upload an Image (Optional)", type=["jpg", "png", "jpeg"])
-        submit_button = st.form_submit_button("Add Instrument")
-        
-        if submit_button and name and category and cabinet:
-            new_data = pd.DataFrame([[name, category, cabinet, shelf, quantity, trays, image]], columns=df.columns)
-            st.session_state.df = pd.concat([df, new_data], ignore_index=True)
-            st.success("✅ Instrument added successfully!")
-
-    # Edit/Delete Instrument
-    st.subheader("✏️ Edit or Remove Instruments")
-    selected_instrument = st.selectbox("Select an instrument:", df["Instrument Name"].unique())
+# Add Instrument
+st.subheader("➕ Add Instrument")
+with st.form("Add Instrument"):
+    name = st.text_input("Instrument Name")
+    category = st.text_input("Category")
+    cabinet = st.text_input("Cabinet Location")
+    shelf = st.text_input("Shelf Number")
+    quantity = st.number_input("Quantity Available", min_value=0, step=1)
+    trays = st.text_input("Trays where this instrument can be found")
+    image = st.file_uploader("Upload an Image (Optional)", type=["jpg", "png", "jpeg"])
+    submit_button = st.form_submit_button("Add Instrument")
     
-    if selected_instrument:
-        instrument_data = df[df["Instrument Name"] == selected_instrument].iloc[0]
-        with st.form("Edit Instrument"):
-            updated_name = st.text_input("Instrument Name", value=instrument_data["Instrument Name"])
-            updated_category = st.text_input("Category", value=instrument_data["Category"])
-            updated_cabinet = st.text_input("Cabinet Location", value=instrument_data["Cabinet Location"])
-            updated_shelf = st.text_input("Shelf Number", value=instrument_data["Shelf Number"])
-            updated_quantity = st.number_input("Quantity Available", value=instrument_data["Quantity Available"], min_value=0, step=1)
-            updated_trays = st.text_input("Trays where this instrument can be found", value=instrument_data["Trays"])
-            update_button = st.form_submit_button("Update Instrument")
-            if update_button:
-                index = df[df["Instrument Name"] == selected_instrument].index[0]
-                st.session_state.df.at[index, "Instrument Name"] = updated_name
-                st.session_state.df.at[index, "Category"] = updated_category
-                st.session_state.df.at[index, "Cabinet Location"] = updated_cabinet
-                st.session_state.df.at[index, "Shelf Number"] = updated_shelf
-                st.session_state.df.at[index, "Quantity Available"] = updated_quantity
-                st.session_state.df.at[index, "Trays"] = updated_trays
-                st.success("✅ Instrument updated successfully!")
+    if submit_button and name and category and cabinet:
+        new_data = pd.DataFrame([[name, category, cabinet, shelf, quantity, trays, image]], columns=df.columns)
+        st.session_state.df = pd.concat([df, new_data], ignore_index=True)
+        st.success("✅ Instrument added successfully!")
+
+# Edit/Delete Instrument
+st.subheader("✏️ Edit or Remove Instruments")
+selected_instrument = st.selectbox("Select an instrument:", df["Instrument Name"].unique())
+
+if selected_instrument:
+    instrument_data = df[df["Instrument Name"] == selected_instrument].iloc[0]
+    with st.form("Edit Instrument"):
+        updated_name = st.text_input("Instrument Name", value=instrument_data["Instrument Name"])
+        updated_category = st.text_input("Category", value=instrument_data["Category"])
+        updated_cabinet = st.text_input("Cabinet Location", value=instrument_data["Cabinet Location"])
+        updated_shelf = st.text_input("Shelf Number", value=instrument_data["Shelf Number"])
+        updated_quantity = st.number_input("Quantity Available", value=instrument_data["Quantity Available"], min_value=0, step=1)
+        updated_trays = st.text_input("Trays where this instrument can be found", value=instrument_data["Trays"])
+        update_button = st.form_submit_button("Update Instrument")
+        if update_button:
+            index = df[df["Instrument Name"] == selected_instrument].index[0]
+            st.session_state.df.at[index, "Instrument Name"] = updated_name
+            st.session_state.df.at[index, "Category"] = updated_category
+            st.session_state.df.at[index, "Cabinet Location"] = updated_cabinet
+            st.session_state.df.at[index, "Shelf Number"] = updated_shelf
+            st.session_state.df.at[index, "Quantity Available"] = updated_quantity
+            st.session_state.df.at[index, "Trays"] = updated_trays
+            st.success("✅ Instrument updated successfully!")
