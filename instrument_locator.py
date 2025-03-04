@@ -7,22 +7,21 @@ USERNAME = "MemoryCapsule"
 PASSWORD = "WFSC"
 
 def authenticate():
-    st.sidebar.subheader("🔑 Admin Login Required")
-    entered_username = st.sidebar.text_input("Username")
-    entered_password = st.sidebar.text_input("Password", type="password")
-    if st.sidebar.button("Login"):
-        if entered_username == USERNAME and entered_password == PASSWORD:
-            st.session_state["authenticated"] = True
-            st.sidebar.success("✅ Authentication successful!")
-        else:
-            st.sidebar.error("❌ Incorrect credentials!")
-
-# Check authentication
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
-if not st.session_state["authenticated"]:
-    authenticate()
-    st.stop()
+    if "authenticated" not in st.session_state:
+        st.session_state["authenticated"] = False
+    
+    with st.sidebar:
+        st.subheader("🔑 Admin Login")
+        entered_username = st.text_input("Username")
+        entered_password = st.text_input("Password", type="password")
+        login_button = st.button("Login")
+        
+        if login_button:
+            if entered_username == USERNAME and entered_password == PASSWORD:
+                st.session_state["authenticated"] = True
+                st.success("✅ Authentication successful!")
+            else:
+                st.error("❌ Incorrect credentials!")
 
 # Initialize the dataset
 if "df" not in st.session_state:
@@ -71,39 +70,37 @@ st.markdown(
 st.title("🔍 Sterile Instrument Locator")
 st.subheader("Easily find and manage sterile instruments at work.")
 
-# Tabs for better organization
-tab1, tab2, tab3 = st.tabs(["📋 View Instruments", "➕ Add Instrument", "✏️ Edit/Delete"])
+# Always show the instrument lookup
+search_query = st.text_input("🔎 Search for an instrument:")
+filtered_df = df[df["Instrument Name"].str.contains(search_query, case=False, na=False)] if search_query else df
+st.dataframe(filtered_df.drop(columns=["Image"]), use_container_width=True)
 
-# View Instruments
-with tab1:
-    search_query = st.text_input("🔎 Search for an instrument:")
-    filtered_df = df[df["Instrument Name"].str.contains(search_query, case=False, na=False)] if search_query else df
-    st.dataframe(filtered_df.drop(columns=["Image"]), use_container_width=True)
+# Show detailed info with image when selecting an instrument
+selected_instrument = st.selectbox("Select an instrument to view details:", filtered_df["Instrument Name"].unique())
+if selected_instrument:
+    instrument_data = df[df["Instrument Name"] == selected_instrument].iloc[0]
+    st.write(f"### {instrument_data['Instrument Name']}")
+    st.write(f"**Category:** {instrument_data['Category']}")
+    st.write(f"**Cabinet Location:** {instrument_data['Cabinet Location']}")
+    st.write(f"**Shelf Number:** {instrument_data['Shelf Number']}")
+    st.write(f"**Quantity Available:** {instrument_data['Quantity Available']}")
+    st.write(f"**Also found in trays:** {instrument_data['Trays']}")
+    
+    # Fetch image if none exists
+    if not instrument_data["Image"]:
+        image_url = fetch_medical_image(selected_instrument)
+        df.loc[df["Instrument Name"] == selected_instrument, "Image"] = image_url
+    
+    # Display image
+    if instrument_data["Image"]:
+        st.image(instrument_data["Image"], use_column_width=True)
 
-    # Show detailed info with image when selecting an instrument
-    selected_instrument = st.selectbox("Select an instrument to view details:", filtered_df["Instrument Name"].unique())
-    if selected_instrument:
-        instrument_data = df[df["Instrument Name"] == selected_instrument].iloc[0]
-        st.write(f"### {instrument_data['Instrument Name']}")
-        st.write(f"**Category:** {instrument_data['Category']}")
-        st.write(f"**Cabinet Location:** {instrument_data['Cabinet Location']}")
-        st.write(f"**Shelf Number:** {instrument_data['Shelf Number']}")
-        st.write(f"**Quantity Available:** {instrument_data['Quantity Available']}")
-        st.write(f"**Also found in trays:** {instrument_data['Trays']}")
-        
-        # Fetch image if none exists
-        if not instrument_data["Image"]:
-            image_url = fetch_medical_image(selected_instrument)
-            df.loc[df["Instrument Name"] == selected_instrument, "Image"] = image_url
-        
-        # Display image
-        if instrument_data["Image"]:
-            st.image(instrument_data["Image"], use_column_width=True)
-
-# Add Instrument
-with tab2:
+# Authentication only needed for editing
+authenticate()
+if st.session_state["authenticated"]:
+    # Add Instrument
+    st.subheader("➕ Add Instrument")
     with st.form("Add Instrument"):
-        st.subheader("Add a New Instrument")
         name = st.text_input("Instrument Name")
         category = st.text_input("Category")
         cabinet = st.text_input("Cabinet Location")
@@ -118,14 +115,12 @@ with tab2:
             st.session_state.df = pd.concat([df, new_data], ignore_index=True)
             st.success("✅ Instrument added successfully!")
 
-# Edit/Delete Instrument
-with tab3:
-    st.subheader("Edit or Remove Instruments")
+    # Edit/Delete Instrument
+    st.subheader("✏️ Edit or Remove Instruments")
     selected_instrument = st.selectbox("Select an instrument:", df["Instrument Name"].unique())
     
     if selected_instrument:
         instrument_data = df[df["Instrument Name"] == selected_instrument].iloc[0]
-
         with st.form("Edit Instrument"):
             updated_name = st.text_input("Instrument Name", value=instrument_data["Instrument Name"])
             updated_category = st.text_input("Category", value=instrument_data["Category"])
@@ -133,9 +128,7 @@ with tab3:
             updated_shelf = st.text_input("Shelf Number", value=instrument_data["Shelf Number"])
             updated_quantity = st.number_input("Quantity Available", value=instrument_data["Quantity Available"], min_value=0, step=1)
             updated_trays = st.text_input("Trays where this instrument can be found", value=instrument_data["Trays"])
-            updated_image = st.file_uploader("Upload a New Image (Optional)", type=["jpg", "png", "jpeg"])
             update_button = st.form_submit_button("Update Instrument")
-            
             if update_button:
                 index = df[df["Instrument Name"] == selected_instrument].index[0]
                 st.session_state.df.at[index, "Instrument Name"] = updated_name
@@ -144,7 +137,4 @@ with tab3:
                 st.session_state.df.at[index, "Shelf Number"] = updated_shelf
                 st.session_state.df.at[index, "Quantity Available"] = updated_quantity
                 st.session_state.df.at[index, "Trays"] = updated_trays
-                if updated_image:
-                    st.session_state.df.at[index, "Image"] = updated_image
-                st.session_state.df.at[index, "Last Updated"] = "2025-03-03"
                 st.success("✅ Instrument updated successfully!")
