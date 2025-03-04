@@ -2,6 +2,28 @@ import streamlit as st
 import pandas as pd
 import requests
 
+# Authentication
+USERNAME = "MemoryCapsule"
+PASSWORD = "WFSC"
+
+def authenticate():
+    st.sidebar.subheader("🔑 Admin Login Required")
+    entered_username = st.sidebar.text_input("Username")
+    entered_password = st.sidebar.text_input("Password", type="password")
+    if st.sidebar.button("Login"):
+        if entered_username == USERNAME and entered_password == PASSWORD:
+            st.session_state["authenticated"] = True
+            st.sidebar.success("✅ Authentication successful!")
+        else:
+            st.sidebar.error("❌ Incorrect credentials!")
+
+# Check authentication
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+if not st.session_state["authenticated"]:
+    authenticate()
+    st.stop()
+
 # Initialize the dataset
 if "df" not in st.session_state:
     st.session_state.df = pd.DataFrame({
@@ -126,7 +148,3 @@ with tab3:
                     st.session_state.df.at[index, "Image"] = updated_image
                 st.session_state.df.at[index, "Last Updated"] = "2025-03-03"
                 st.success("✅ Instrument updated successfully!")
-        
-        if st.button("❌ Remove Instrument"):
-            st.session_state.df = df[df["Instrument Name"] != selected_instrument]
-            st.success("🗑️ Instrument removed successfully!")
