@@ -9,23 +9,24 @@ if "df" not in st.session_state:
         "Cabinet Location": ["A1", "B2", "C3"],
         "Shelf Number": ["Top", "Middle", "Bottom"],
         "Quantity Available": [5, 3, 7],
-        "Trays": ["Surgery Kit", "Dental Kit", "General Kit"]
+        "Trays": ["Surgery Kit", "Dental Kit", "General Kit"],
+        "Image": [None, None, None]
     })
 
 df = st.session_state.df
 
 # Title
-st.title("Sterile Instrument Locator")
+st.title("Instrument Tracking System")
 
 # Navigation Tabs
-tabs = ["View All Instruments", "Edit Instruments"]
+tabs = ["View Instruments", "Manage Instruments"]
 selected_tab = st.radio("Navigate:", tabs)
 
-if selected_tab == "View All Instruments":
-    st.subheader("🔍 View All Instruments")
+if selected_tab == "View Instruments":
+    st.subheader("🔍 View Instruments")
     search_query = st.text_input("Search for an instrument:")
     filtered_df = df[df["Instrument Name"].str.contains(search_query, case=False, na=False)] if search_query else df
-    st.dataframe(filtered_df, use_container_width=True)
+    st.dataframe(filtered_df.drop(columns=["Image"]), use_container_width=True)
     
     # Instrument details
     selected_instrument = st.selectbox("Select an instrument to view details:", filtered_df["Instrument Name"].unique())
@@ -37,9 +38,13 @@ if selected_tab == "View All Instruments":
         st.write(f"**Shelf Number:** {instrument_data['Shelf Number']}")
         st.write(f"**Quantity Available:** {instrument_data['Quantity Available']}")
         st.write(f"**Also found in trays:** {instrument_data['Trays']}")
+        
+        # Display image if available
+        if instrument_data["Image"]:
+            st.image(instrument_data["Image"], use_container_width=True)
 
-elif selected_tab == "Edit Instruments":
-    st.subheader("✏️ Edit or Add Instruments")
+elif selected_tab == "Manage Instruments":
+    st.subheader("✏️ Add or Edit Instruments")
     with st.form("Add Instrument"):
         name = st.text_input("Instrument Name")
         category = st.text_input("Category")
@@ -47,10 +52,11 @@ elif selected_tab == "Edit Instruments":
         shelf = st.text_input("Shelf Number")
         quantity = st.number_input("Quantity Available", min_value=0, step=1)
         trays = st.text_input("Trays where this instrument can be found")
+        image = st.file_uploader("Upload an Image (Optional)", type=["jpg", "png", "jpeg"])
         submit_button = st.form_submit_button("Add Instrument")
         
         if submit_button and name and category and cabinet:
-            new_data = pd.DataFrame([[name, category, cabinet, shelf, quantity, trays]], columns=df.columns)
+            new_data = pd.DataFrame([[name, category, cabinet, shelf, quantity, trays, image]], columns=df.columns)
             st.session_state.df = pd.concat([df, new_data], ignore_index=True)
             st.success("✅ Instrument added successfully!")
     
@@ -66,6 +72,7 @@ elif selected_tab == "Edit Instruments":
             updated_shelf = st.text_input("Shelf Number", value=instrument_data["Shelf Number"])
             updated_quantity = st.number_input("Quantity Available", value=instrument_data["Quantity Available"], min_value=0, step=1)
             updated_trays = st.text_input("Trays where this instrument can be found", value=instrument_data["Trays"])
+            updated_image = st.file_uploader("Upload a New Image (Optional)", type=["jpg", "png", "jpeg"])
             update_button = st.form_submit_button("Update Instrument")
             if update_button:
                 index = df[df["Instrument Name"] == selected_instrument].index[0]
@@ -75,4 +82,6 @@ elif selected_tab == "Edit Instruments":
                 st.session_state.df.at[index, "Shelf Number"] = updated_shelf
                 st.session_state.df.at[index, "Quantity Available"] = updated_quantity
                 st.session_state.df.at[index, "Trays"] = updated_trays
+                if updated_image:
+                    st.session_state.df.at[index, "Image"] = updated_image
                 st.success("✅ Instrument updated successfully!")
